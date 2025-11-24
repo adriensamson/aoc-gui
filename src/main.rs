@@ -1,6 +1,5 @@
 use std::fmt::{Display, Formatter};
 use iced::{widget, Element, Task};
-use iced::futures::Stream;
 use iced::widget::{column};
 use aoc_gui::AocMessage;
 
@@ -75,7 +74,7 @@ impl App {
             AppMessage::Run => {
                 if let Some(day) = self.day.and_then(|d| aoc_gui::DAYS.get(d.0)) {
                     self.running = true;
-                    Task::run(iter_to_stream(day(self.input.text())), AppMessage::AocMessage)
+                    Task::run(day.run(self.input.text()), AppMessage::AocMessage)
                 } else {
                     Task::none()
                 }
@@ -115,14 +114,4 @@ impl App {
         };
         column![day, input, run].into()
     }
-}
-
-fn iter_to_stream<T: Send + 'static>(iter: impl Iterator<Item=T> + Send + 'static) -> impl Stream<Item=T> + Send {
-    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-    tokio::task::spawn_blocking(move || {
-        for item in iter {
-            tx.send(item).unwrap();
-        }
-    });
-    tokio_stream::wrappers::UnboundedReceiverStream::new(rx)
 }
