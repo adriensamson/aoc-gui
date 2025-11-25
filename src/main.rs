@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
-use iced::{widget, Element, Task};
-use iced::widget::{column};
+use iced::{widget, Alignment, Element, Task};
+use iced::widget::{column, scrollable};
 use aoc_gui::AocMessage;
 
 fn main() -> iced::Result {
@@ -50,6 +50,7 @@ enum AppMessage {
     InputAction(widget::text_editor::Action),
     Run,
     AocMessage(AocMessage),
+    Copy(String),
 }
 
 impl App {
@@ -79,6 +80,9 @@ impl App {
                     Task::none()
                 }
             },
+            AppMessage::Copy(s) => {
+                iced::clipboard::write(s)
+            }
             AppMessage::AocMessage(AocMessage::Log(log)) => {
                 self.logs.push(log);
                 Task::none()
@@ -103,15 +107,29 @@ impl App {
         let input = widget::text_editor(&self.input).height(120).on_action(AppMessage::InputAction);
         let run : Element<_> = if self.running {
             column![
-                widget::button("Reset").on_press(AppMessage::Reset),
-                widget::progress_bar(0f32..=(self.progress.1 as f32), self.progress.0 as f32),
-                if let Some(res) = &self.result_part1 { widget::text!("Part1: {res}") } else { widget::text("Part1...") },
-                if let Some(res) = &self.result_part2 { widget::text!("Part2: {res}") } else { widget::text("Part2...") },
-                column(self.logs.iter().map(|l| widget::text(l).into())),
+                widget::button("Reset").style(widget::button::danger).on_press(AppMessage::Reset),
+                widget::progress_bar(0f32..=(self.progress.1 as f32), self.progress.0 as f32).style(widget::progress_bar::success),
+                result_row("Part1", &self.result_part1),
+                result_row("Part2", &self.result_part2),
+                scrollable(column(self.logs.iter().map(|l| widget::text(l).into()))),
             ].into()
         } else {
             widget::button("Run").on_press(AppMessage::Run).into()
         };
         column![day, input, run].into()
+    }
+}
+
+fn result_row<'a>(part: &'static str, result: &'a Option<String>) -> Element<'a, AppMessage> {
+    if let Some(res) = result {
+        let copy = AppMessage::Copy(res.clone());
+        widget::row![
+            widget::value(format!("{part}: ")),
+            widget::value(res),
+            widget::horizontal_space(),
+            widget::button("Copy").style(widget::button::secondary).on_press(copy),
+        ].align_y(Alignment::Center).into()
+    } else {
+        widget::value(format!("{part}...")).into()
     }
 }
