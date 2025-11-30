@@ -1,7 +1,7 @@
 use std::thread::sleep;
 use std::time::Duration;
-use tokio::sync::mpsc::UnboundedSender;
-use tokio_stream::wrappers::UnboundedReceiverStream;
+use tokio::sync::mpsc::Sender;
+use tokio_stream::wrappers::ReceiverStream;
 
 #[derive(Clone, Debug)]
 pub enum AocMessage {
@@ -11,36 +11,36 @@ pub enum AocMessage {
     ResultPart2(String),
 }
 
-pub type AocStream = UnboundedReceiverStream<AocMessage>;
+pub type AocStream = ReceiverStream<AocMessage>;
 pub struct AocDay(&'static (dyn Fn(AocSender, String) + Send + Sync));
 
-struct AocSender(UnboundedSender<AocMessage>);
+struct AocSender(Sender<AocMessage>);
 
 impl AocSender {
     fn log(&self, log: impl ToString) {
-        self.0.send(AocMessage::Log(log.to_string())).unwrap();
+        self.0.blocking_send(AocMessage::Log(log.to_string())).unwrap();
     }
 
     fn result_part1(&self, res: impl ToString) {
-        self.0.send(AocMessage::ResultPart1(res.to_string())).unwrap();
+        self.0.blocking_send(AocMessage::ResultPart1(res.to_string())).unwrap();
     }
 
     fn result_part2(&self, res: impl ToString) {
-        self.0.send(AocMessage::ResultPart2(res.to_string())).unwrap();
+        self.0.blocking_send(AocMessage::ResultPart2(res.to_string())).unwrap();
     }
 
     fn progress(&self, prog: usize, total: usize) {
-        self.0.send(AocMessage::Progress(prog, total)).unwrap();
+        self.0.blocking_send(AocMessage::Progress(prog, total)).unwrap();
     }
 }
 
 impl AocDay {
     pub fn run(&'static self, input: String) -> AocStream {
-        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        let (tx, rx) = tokio::sync::mpsc::channel(8);
         tokio::task::spawn_blocking(move || {
             self.0(AocSender(tx), input);
         });
-        UnboundedReceiverStream::new(rx)
+        ReceiverStream::new(rx)
     }
 }
 
