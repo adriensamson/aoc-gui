@@ -3,6 +3,8 @@ use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio_stream::wrappers::ReceiverStream;
 
+pub mod day1;
+
 #[derive(Clone, Debug)]
 pub enum AocMessage {
     Log(String),
@@ -45,7 +47,7 @@ impl AocDay {
 }
 
 pub const DAYS : [AocDay; 12] = [
-    AocDay(&dummy_day),
+    AocDay(&day1::day1),
     AocDay(&dummy_day),
     AocDay(&dummy_day),
     AocDay(&dummy_day),
